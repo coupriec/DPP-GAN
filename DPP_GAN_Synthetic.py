@@ -225,5 +225,4 @@ def run_gan(model_num):
 if __name__ == '__main__':
     # Specify a model id to experiment with.
     # Even numbers for 2D Ring, Odd numbers for 2D Grid
-    for model_num in range(100, 110):
-        run_gan(model_num)
+    run_gan(model_num=0)
