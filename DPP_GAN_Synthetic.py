@@ -11,13 +11,10 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Specify a range of model ids to experiment with.
-# Even numbers for 2D Ring, Odd numbers for 2D Grid
-# Example: [0, 2]
-model_nums = [0, 2]
-
 # Change the write Dir to where you want to save the models & Plots
 write_dir = '/home/elfeki/Workspace/DPP-GAN_ICLR/'
+
+
 if not os.path.exists(write_dir+'models'):
     os.makedirs(write_dir+'models')
 if not os.path.exists(write_dir+'Plots'):
@@ -33,6 +30,7 @@ params = dict(
     viz_every=50,
     z_dim=256,
     x_dim=2,
+    eig_vals_loss_weight=0.0001,
 )
 
 ds = tf.contrib.distributions
@@ -118,42 +116,11 @@ def evaluate_samples(generated_samples, data, model_num, is_ring_distribution=Tr
     print('Percentage of Points Falling Within 3 std. of the Nearest Mode %f' % high_quality_ratio)
 
 
-# def compute_diversity_loss(h_fake, h_real):# RBF-Kernel
-#     def compute_rbn_kernel(h):
-#         # L[i,j] = (h[i]-h[j])(h[i]-h[j])'
-#         # L[i,j] = r[i] - 2 h[i]h[j]' + r[j]; r[i] is squared norm of i-th row
-#         # L = r - 2 h h' + r'
-#         r = tf.reshape(tf.reduce_sum(h * h, 1), [-1, 1])
-#         L = r - 2 * tf.matmul(h, tf.transpose(h)) + tf.transpose(r)
-#         L_exp = tf.exp(-tf.abs(L))
-#         return tf.where(tf.is_nan(L_exp), tf.zeros_like(L_exp), L_exp), L_exp
-#
-#     def compute_diversity(h):
-#         Ly, L_exp = compute_rbn_kernel(h)
-#
-#         eig_val, eig_vec = tf.self_adjoint_eig(Ly)
-#         eig_vec = tf.nn.l2_normalize(eig_vec, 0)  # L2-Normalize Eig-Vectors
-#         return eig_val, eig_vec, L_exp
-#
-#     def normalize_min_max(eig_val):  # Min-max-Normalize Eig-Values
-#         return tf.div(tf.subtract(eig_val, tf.reduce_min(eig_val)),
-#                       tf.subtract(tf.reduce_max(eig_val), tf.reduce_min(eig_val)))
-#
-#     fake_eig_val, fake_eig_vec, L_exp_fake = compute_diversity(h_fake)
-#     real_eig_val, real_eig_vec, L_exp_real = compute_diversity(h_real)
-#     # Used a weighing factor to make the two losses operating in comparable ranges.
-#     eigen_values_loss = 0.0001 * tf.losses.mean_squared_error(labels=real_eig_val, predictions=fake_eig_val)
-#     eigen_vectors_loss = -tf.reduce_sum(tf.multiply(fake_eig_vec, real_eig_vec), 0)
-#     normalized_real_eig_val = normalize_min_max(real_eig_val)
-#     weighted_eigen_vectors_loss = tf.reduce_sum(tf.multiply(normalized_real_eig_val, eigen_vectors_loss))
-#     return (eigen_values_loss + weighted_eigen_vectors_loss), fake_eig_val, real_eig_val, eigen_values_loss, weighted_eigen_vectors_loss, L_exp_fake, L_exp_real
-
-
-def compute_diversity_loss(h_fake, h_real):#Final
+def compute_diversity_loss(h_fake, h_real):
     def compute_diversity(h):
+        h = tf.nn.l2_normalize(h, 1)
         Ly = tf.tensordot(h, tf.transpose(h), 1)
         eig_val, eig_vec = tf.self_adjoint_eig(Ly)
-        eig_vec = tf.nn.l2_normalize(eig_vec,0) # L2-Normalize Eig-Vectors
         return eig_val, eig_vec
 
     def normalize_min_max(eig_val):
@@ -163,16 +130,17 @@ def compute_diversity_loss(h_fake, h_real):#Final
     fake_eig_val, fake_eig_vec = compute_diversity(h_fake)
     real_eig_val, real_eig_vec = compute_diversity(h_real)
     # Used a weighing factor to make the two losses operating in comparable ranges.
-    eigen_values_loss = 0.0001 * tf.losses.mean_squared_error(labels=real_eig_val, predictions=fake_eig_val)
+    eigen_values_loss = params['eig_vals_loss_weight'] * tf.losses.mean_squared_error(labels=real_eig_val, predictions=fake_eig_val)
     eigen_vectors_loss = -tf.reduce_sum(tf.multiply(fake_eig_vec, real_eig_vec), 0)
     normalized_real_eig_val = normalize_min_max(real_eig_val)
     weighted_eigen_vectors_loss = tf.reduce_sum(tf.multiply(normalized_real_eig_val, eigen_vectors_loss))
-    return eigen_values_loss + weighted_eigen_vectors_loss, fake_eig_val, real_eig_val, eigen_values_loss, eigen_vectors_loss
+    return eigen_values_loss + weighted_eigen_vectors_loss, fake_eig_val, real_eig_val, eigen_values_loss, weighted_eigen_vectors_loss
 
 
 def run_gan(model_num):
-    run_config = tf.ConfigProto()
-    run_config.gpu_options.allow_growth = True
+    # run_config = tf.ConfigProto()
+    # run_config.gpu_options.allow_growth = True
+    # sess = tf.InteractiveSession(config=run_config)
     tf.reset_default_graph()
     with tf.Graph().as_default():
         tf.set_random_seed(random_seed)
@@ -198,7 +166,7 @@ def run_gan(model_num):
             tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_score, labels=tf.ones_like(real_score)))
 
         diversity_loss, fake_lambda, real_lambda, eig_vals_loss, eig_vecs_loss = compute_diversity_loss(fake_h, real_h)
-        gen_loss = 0.5*gen_loss + 0.5*diversity_loss
+        gen_loss = 0.5 * (gen_loss + diversity_loss)
 
         gen_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "generator")
         disc_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "discriminator")
@@ -212,7 +180,7 @@ def run_gan(model_num):
         g_train_op = g_train_opt.minimize(gen_loss, var_list=gen_vars)
 
         # Train !!
-        sess = tf.InteractiveSession(config=run_config)
+        sess = tf.InteractiveSession()
         sess.run(tf.global_variables_initializer())
 
         fake_lmda_list, real_lmda_list, diversity_loss_arr, gen_loss_arr, disc_loss_arr = [], [], [], [], []
@@ -255,6 +223,7 @@ def run_gan(model_num):
 
 
 if __name__ == '__main__':
-    for model_num in range(model_nums[0], model_nums[1]):
+    # Specify a model id to experiment with.
+    # Even numbers for 2D Ring, Odd numbers for 2D Grid
+    for model_num in range(100, 110):
         run_gan(model_num)
-
