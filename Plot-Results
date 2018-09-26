@@ -6,6 +6,18 @@ b==>Qual in 2D Ring
 c==>#modes in 2D Grid
 d==>Qual in 2D Grid
 
+Code for both of Exp.1 & Exp.2
+plt.title('2D Grid')
+plt.plot(c, '-bx', label='DPP-GAN')
+plt.plot(g, '-go', label='Unrolled-GAN')
+plt.plot(k, '-rd', label='VEE-GAN')
+plt.plot(o, '-y*', label='WGAN-GP')
+plt.legend()
+plt.xticks(range(5), [32, 128, 512, 1024, 2048])
+plt.xlabel('Batch Size')
+plt.ylabel('# Modes')
+plt.show()
+
 # Exp.1: Batch-Size Experiment
 
 # DPP
@@ -74,3 +86,12 @@ dpp_gan = [2.30394, 2.80759, 3.89844, 3.34437, 4.01253, 3.89258, 3.4969, 4.27287
 wgan_gp = [2.1128, 2.57101, 2.8195, 3.13987, 3.31419, 3.37348, 3.81657, 3.86184, 3.94905, 4.01972, 4.28645, 4.25352, 4.35237, 4.4504, 4.84131, 4.56646, 4.79464, 4.89391, 4.96302, 4.77901, 4.71402, 4.79377, 4.76195, 4.82129, 4.73443]
 wgan = [1.1861, 1.76215, 2.0078, 2.23806, 2.19133, 2.34055, 2.26999, 2.56071, 2.57341, 2.57932, 2.51818, 2.64853, 2.604, 2.63975, 2.74746, 2.65929, 2.60582, 2.66131, 2.7684, 2.68979, 2.73138, 2.67573, 2.63984, 2.683, 2.71119]
 dcgan = [1.96787, 3.17265, 2.85445, 3.84794, 3.25607, 3.03651, 3.62778, 3.93409, 3.61467, 4.40931, 2.8925, 4.32953, 3.18623, 4.71613, 4.92785, 4.75118, 3.37389, 4.02333, 3.7699, 4.92923, 3.49981, 4.35684, 4.99912, 4.00719, 4.81259]
+
+plt.plot(dpp_gan, '-r*', label='DPP-GAN')
+plt.plot(wgan_gp, '-bd', label='WGAN-GP')
+plt.plot(wgan, '-g^', label='WGAN')
+plt.plot(dcgan, '-yx', label='DCGAN')
+plt.xlabel('Iteration Number (x1000)')
+plt.ylabel('Inception Score')
+plt.legend()
+plt.show()
