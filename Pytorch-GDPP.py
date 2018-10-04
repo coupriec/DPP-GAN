@@ -64,6 +64,6 @@ q2 = compute_gdpp(p1, p2)
 
 # Slightly different results based on the eigen-values.
 # Tensorflow and Pytorch have different methods to do the eigen-decomposition,
-# The results are differ in +/- 0.005 on average.
+# The results are differ in +/- 0.00234 on average with a std of 0.00148
 print q1, q2
 
