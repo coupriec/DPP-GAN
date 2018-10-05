@@ -71,4 +71,4 @@ print losses.mean(), losses.std()
 
 # Slightly different results based on the eigen-values.
 # Tensorflow and Pytorch have different methods to do the eigen-decomposition,
-# The results are differ in +/- 0.00139 on average with a std of 0.00095
+# The results differ in +/- 0.00139 on average with a std of 0.00095
