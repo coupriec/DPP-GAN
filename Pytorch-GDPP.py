@@ -48,7 +48,7 @@ def compute_diversity_loss(h_fake, h_real):
     fake_eig_val, fake_eig_vec = compute_diversity(h_fake)
     real_eig_val, real_eig_vec = compute_diversity(h_real)
     # Used a weighing factor to make the two losses operating in comparable ranges.
-    eigen_values_loss = tf.losses.mean_squared_error(labels=real_eig_val, predictions=fake_eig_val)
+    eigen_values_loss = 0.0001 * tf.losses.mean_squared_error(labels=real_eig_val, predictions=fake_eig_val)
     eigen_vectors_loss = -tf.reduce_sum(tf.multiply(fake_eig_vec, real_eig_vec), 0)
     normalized_real_eig_val = normalize_min_max(real_eig_val)
     weighted_eigen_vectors_loss = tf.reduce_sum(tf.multiply(normalized_real_eig_val, eigen_vectors_loss))
