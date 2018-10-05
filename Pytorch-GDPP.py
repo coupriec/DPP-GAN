@@ -7,10 +7,8 @@ import torch
 import torch.nn.functional as f
 import tensorflow as tf
 
-np.random.seed(1)
+# np.random.seed(1)
 
-phi_1 = np.random.random((512, 128))*1000000.0
-phi_2 = np.random.random((512, 128))*1000000.0
 
 
 def compute_gdpp(phi_fake, phi_real):
@@ -55,15 +53,22 @@ def compute_diversity_loss(h_fake, h_real):
     return tf.cast(eigen_values_loss, tf.float64) + weighted_eigen_vectors_loss
 
 
+losses = []
 session = tf.InteractiveSession()
-q1 = session.run(compute_diversity_loss(tf.constant(phi_1), tf.constant(phi_2)))
+for i in range(30):
+    phi_1 = np.random.random((512, 128))*1000000.0
+    phi_2 = np.random.random((512, 128))*1000000.0
+    q1 = session.run(compute_diversity_loss(tf.constant(phi_1), tf.constant(phi_2)))
 
-p1 = torch.tensor(phi_1)
-p2 = torch.tensor(phi_2)
-q2 = compute_gdpp(p1, p2)
+    p1 = torch.tensor(phi_1)
+    p2 = torch.tensor(phi_2)
+    q2 = compute_gdpp(p1, p2).item()
+
+    losses.append(np.abs(q1-q2))
+
+losses = np.array(losses)
+print losses.mean(), losses.std()
 
 # Slightly different results based on the eigen-values.
 # Tensorflow and Pytorch have different methods to do the eigen-decomposition,
-# The results are differ in +/- 0.00234 on average with a std of 0.00148
-print q1, q2
-
+# The results are differ in +/- 0.00139 on average with a std of 0.00095
